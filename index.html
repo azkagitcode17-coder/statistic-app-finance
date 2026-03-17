@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTrack — Pencatat Keuangan Pribadi</title>
+
+  <!-- ===== Google Fonts: Sora (UI) + Playfair Display (Display) ===== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Sora:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Chart.js untuk grafik statistik ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- ===== Stylesheet utama ===== -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       OVERLAY LOADING — tampil saat app pertama kali memuat data
+  ============================================================ -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>Memuat data…</p>
+  </div>
+
+  <!-- ============================================================
+       WRAPPER UTAMA
+  ============================================================ -->
+  <div class="app-wrapper">
+
+    <!-- ===== HEADER ===== -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-icon">◈</span>
+        <h1 class="brand-name">FinTrack</h1>
+      </div>
+      <p class="header-subtitle">Pencatat Keuangan Pribadi</p>
+    </header>
+
+    <!-- ===== SECTION: KARTU RINGKASAN SALDO ===== -->
+    <section class="summary-section" aria-label="Ringkasan Saldo">
+
+      <!-- Kartu Saldo Utama -->
+      <div class="card card-balance">
+        <p class="card-label">Total Saldo</p>
+        <h2 class="card-amount" id="total-balance">Rp 0</h2>
+        <div class="balance-bar">
+          <div class="balance-bar-fill" id="balance-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Kartu Pemasukan -->
+      <div class="card card-income">
+        <div class="card-icon income-icon">↑</div>
+        <div>
+          <p class="card-label">Total Pemasukan</p>
+          <h3 class="card-amount" id="total-income">Rp 0</h3>
+        </div>
+      </div>
+
+      <!-- Kartu Pengeluaran -->
+      <div class="card card-expense">
+        <div class="card-icon expense-icon">↓</div>
+        <div>
+          <p class="card-label">Total Pengeluaran</p>
+          <h3 class="card-amount" id="total-expense">Rp 0</h3>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===== LAYOUT UTAMA: Form + Daftar Transaksi ===== -->
+    <main class="main-layout">
+
+      <!-- ---- KOLOM KIRI: Form Input ---- -->
+      <aside class="sidebar">
+
+        <div class="card form-card">
+          <h2 class="section-title">Tambah Transaksi</h2>
+
+          <!-- Form Transaksi (tidak menggunakan <form> submit; pakai tombol onclick) -->
+          <div class="form-group">
+            <label class="form-label" for="input-desc">Deskripsi</label>
+            <input
+              type="text"
+              id="input-desc"
+              class="form-input"
+              placeholder="Misal: Gaji, Makan siang…"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-amount">Jumlah (Rp)</label>
+            <input
+              type="number"
+              id="input-amount"
+              class="form-input"
+              placeholder="0"
+              min="0"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tipe Transaksi</label>
+            <!-- Toggle pill: Pemasukan / Pengeluaran -->
+            <div class="type-toggle" id="type-toggle" role="group" aria-label="Tipe transaksi">
+              <button
+                class="type-btn active"
+                id="btn-income"
+                data-type="income"
+                onclick="selectType('income')"
+                aria-pressed="true"
+              >
+                ↑ Pemasukan
+              </button>
+              <button
+                class="type-btn"
+                id="btn-expense"
+                data-type="expense"
+                onclick="selectType('expense')"
+                aria-pressed="false"
+              >
+                ↓ Pengeluaran
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-date">Tanggal</label>
+            <input
+              type="date"
+              id="input-date"
+              class="form-input"
+            />
+          </div>
+
+          <!-- Tombol Tambah Transaksi -->
+          <button class="btn-add" id="btn-add" onclick="addTransaction()">
+            <span class="btn-icon">+</span> Tambah Transaksi
+          </button>
+
+          <!-- Pesan Error / Sukses -->
+          <div class="form-message" id="form-message" aria-live="polite"></div>
+        </div>
+
+        <!-- ---- Kartu Filter ---- -->
+        <div class="card filter-card">
+          <h2 class="section-title">Filter</h2>
+          <div class="form-group">
+            <label class="form-label" for="filter-type">Tipe</label>
+            <select id="filter-type" class="form-input" onchange="applyFilters()">
+              <option value="all">Semua</option>
+              <option value="income">Pemasukan</option>
+              <option value="expense">Pengeluaran</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-month">Bulan</label>
+            <input type="month" id="filter-month" class="form-input" onchange="applyFilters()" />
+          </div>
+          <button class="btn-reset" onclick="resetFilters()">Reset Filter</button>
+        </div>
+
+      </aside>
+
+      <!-- ---- KOLOM KANAN: Daftar Transaksi + Chart ---- -->
+      <section class="content-area">
+
+        <!-- Daftar Transaksi -->
+        <div class="card transactions-card">
+          <div class="transactions-header">
+            <h2 class="section-title">Riwayat Transaksi</h2>
+            <span class="tx-count" id="tx-count">0 transaksi</span>
+          </div>
+
+          <!-- List transaksi; diisi secara dinamis oleh JS -->
+          <ul class="transaction-list" id="transaction-list" aria-live="polite">
+            <li class="empty-state" id="empty-state">
+              <span class="empty-icon">📂</span>
+              <p>Belum ada transaksi.</p>
+              <p class="empty-hint">Tambahkan transaksi pertama Anda!</p>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Grafik Statistik -->
+        <div class="card chart-card">
+          <div class="chart-header">
+            <h2 class="section-title">Statistik Keuangan</h2>
+            <div class="chart-tabs" role="tablist">
+              <button
+                class="chart-tab active"
+                id="tab-bar"
+                role="tab"
+                aria-selected="true"
+                onclick="switchChart('bar')"
+              >Bar</button>
+              <button
+                class="chart-tab"
+                id="tab-line"
+                role="tab"
+                aria-selected="false"
+                onclick="switchChart('line')"
+              >Line</button>
+              <button
+                class="chart-tab"
+                id="tab-doughnut"
+                role="tab"
+                aria-selected="false"
+                onclick="switchChart('doughnut')"
+              >Donut</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="finance-chart"></canvas>
+          </div>
+          <p class="chart-note" id="chart-note">Menampilkan data per tanggal</p>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="app-footer">
+      <p>FinTrack &copy; <span id="footer-year"></span> — Data tersimpan di Firebase Firestore</p>
+    </footer>
+
+  </div><!-- /.app-wrapper -->
+
+  <!-- ============================================================
+       TOAST NOTIFICATION (muncul setelah aksi berhasil/gagal)
+  ============================================================ -->
+  <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ============================================================
+       KONFIRMASI HAPUS (modal sederhana)
+  ============================================================ -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeDeleteModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="event.stopPropagation()">
+      <h3 id="modal-title" class="modal-title">Hapus Transaksi?</h3>
+      <p class="modal-body">Transaksi ini akan dihapus permanen dari database.</p>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeDeleteModal()">Batal</button>
+        <button class="btn-modal-confirm" id="btn-confirm-delete" onclick="confirmDelete()">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FIREBASE SDK MODULAR (v10) — CDN ESM
+  ============================================================ -->
+  <script type="module" src="script.js"></script>
+
+</body>
+</html>
